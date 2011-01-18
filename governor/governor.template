@@ -1,0 +1,11 @@
+#!/system/bin/sh
+
+# ${gov_desc}
+
+# Load governor modules
+insmod /system/lib/modules/cpufreq_interactive.ko
+insmod /system/lib/modules/cpufreq_smartass.ko
+insmod /system/lib/modules/cpufreq_conservative.ko
+
+# Configure default governor
+echo "${gov_type}" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor

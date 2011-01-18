@@ -1,0 +1,92 @@
+#!/usr/bin/python
+
+#
+# Generate overclock package for ShadowMOD-BR
+# by Edgard Castro
+#
+
+from genshi.template import TextTemplate
+import ConfigParser
+import zipfile
+import glob, os
+
+config = ConfigParser.ConfigParser()
+config.readfp(open('overclock.cfg'))
+
+freqs = config.getint('DEFAULT', 'numfrequencies')
+version = config.get('DEFAULT', 'version')
+
+os.mkdir("out")
+
+for i in range(0, freqs):
+    freqnum = "freq_" + str(i)
+    freq_author = config.get(freqnum, 'author')
+    freq_voltage = config.get(freqnum, 'voltage')
+    freq_table = config.get(freqnum, 'frequencies').split(",")
+    freq_vsel = config.get(freqnum, 'vsel').split(",")
+    freq_scale = config.get(freqnum, 'scale').split(",")
+    freq_desc = "%sx%s, %s voltage" % (freq_scale[0], freq_scale[3], freq_voltage)
+
+    freq_table_1 = freq_table[0]
+    freq_table_2 = freq_table[1]
+    freq_table_3 = freq_table[2]
+    freq_table_4 = freq_table[3]
+    freq_table_5 = freq_table[4]
+
+    freq_vsel_1 = freq_vsel[0]
+    freq_vsel_2 = freq_vsel[1]
+    freq_vsel_3 = freq_vsel[2]
+    freq_vsel_4 = freq_vsel[3]
+    freq_vsel_5 = freq_vsel[4]
+
+    freq_scale_1 = freq_scale[0]
+    freq_scale_2 = freq_scale[1]
+    freq_scale_3 = freq_scale[2]
+    freq_scale_4 = freq_scale[3]
+
+    # Load template
+    template = TextTemplate(open('overclock.template', 'r'))
+
+    output = template.generate(freq_desc=freq_desc,
+                            freq_author=freq_author,
+                            freq_table_1=freq_table_1,
+                            freq_table_2=freq_table_2,
+                            freq_table_3=freq_table_3,
+                            freq_table_4=freq_table_4,
+                            freq_table_5=freq_table_5,
+                            freq_vsel_1=freq_vsel_1,
+                            freq_vsel_2=freq_vsel_2,
+                            freq_vsel_3=freq_vsel_3,
+                            freq_vsel_4=freq_vsel_4,
+                            freq_vsel_5=freq_vsel_5,
+                            freq_scale_1=freq_scale_1,
+                            freq_scale_2=freq_scale_2,
+                            freq_scale_3=freq_scale_3,
+                            freq_scale_4=freq_scale_4,
+                            ).render('text')
+
+    file = open("out/71_overclock", 'w')
+    file.write(output)
+    file.close()
+
+    filenamezip = "out/update-smbr-%s-overclock-%sx%s-%s-%s.zip" % (version, freq_scale[0], freq_scale[3], freq_voltage, freq_author)
+    filezip = zipfile.ZipFile(filenamezip, 'w')
+
+    filezip.write("out/71_overclock", "system/etc/init.d/71_overclock", zipfile.ZIP_DEFLATED)
+    filezip.write("common/update-binary", "META-INF/com/google/android/update-binary", zipfile.ZIP_DEFLATED)
+    filezip.write("common/updater-script", "META-INF/com/google/android/updater-script", zipfile.ZIP_DEFLATED)
+
+    filezip.close()
+
+    os.remove("out/71_overclock")
+
+# Create zip package with all patches
+os.mkdir("release")
+filenamereleasezip = "release/smbr-%s-overclock-pack.zip" % (version)
+releasezip = zipfile.ZipFile(filenamereleasezip, 'w')
+for name in glob.glob("out/*"):
+    releasezip.write(name, os.path.basename(name))
+    os.remove(name)
+releasezip.write("common/overclock-disable.zip", "update-smbr-%s-overclock-disable.zip" % (version))
+releasezip.close()
+os.rmdir("out")

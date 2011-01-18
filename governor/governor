@@ -1,0 +1,57 @@
+#!/usr/bin/python
+
+#
+# Generate governor package for ShadowMOD-BR
+# by Edgard Castro
+#
+
+from genshi.template import TextTemplate
+import ConfigParser
+import zipfile
+import glob, os
+
+config = ConfigParser.ConfigParser()
+config.readfp(open('governor.cfg'))
+
+govs = config.getint('DEFAULT', 'numgovernors')
+version = config.get('DEFAULT', 'version')
+
+os.mkdir("out")
+
+for i in range(0, govs):
+    govnum = "gov_" + str(i)
+    gov_type = config.get(govnum, 'type')
+    gov_desc = "%s governor" % (gov_type)
+
+    # Load template
+    template = TextTemplate(open('governor.template', 'r'))
+
+    output = template.generate(gov_desc=gov_desc,
+                            gov_type=gov_type,
+                            ).render('text')
+
+    file = open("out/72_governor", 'w')
+    file.write(output)
+    file.close()
+
+    filenamezip = "out/update-smbr-%s-governor-%s.zip" % (version, gov_type)
+    filezip = zipfile.ZipFile(filenamezip, 'w')
+
+    filezip.write("out/72_governor", "system/etc/init.d/72_governor", zipfile.ZIP_DEFLATED)
+    filezip.write("common/update-binary", "META-INF/com/google/android/update-binary", zipfile.ZIP_DEFLATED)
+    filezip.write("common/updater-script", "META-INF/com/google/android/updater-script", zipfile.ZIP_DEFLATED)
+
+    filezip.close()
+
+    os.remove("out/72_governor")
+
+# Create zip package with all patches
+os.mkdir("release")
+filenamereleasezip = "release/smbr-%s-governor-pack.zip" % (version)
+releasezip = zipfile.ZipFile(filenamereleasezip, 'w')
+for name in glob.glob("out/*"):
+    releasezip.write(name, os.path.basename(name))
+    os.remove(name)
+releasezip.write("common/governor-disable.zip", "update-smbr-%s-governor-disable.zip" % (version))
+releasezip.close()
+os.rmdir("out")
